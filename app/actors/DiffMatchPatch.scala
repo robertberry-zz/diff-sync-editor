@@ -1,4 +1,4 @@
-package state
+package actors
 
 import name.fraser.neil.plaintext.diff_match_patch
 

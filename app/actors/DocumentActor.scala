@@ -1,8 +1,8 @@
-package state
+package actors
 
 import java.util
 
-import akka.actor.Actor
+import akka.actor.{Props, Actor}
 import model.Document
 import name.fraser.neil.plaintext.diff_match_patch.Diff
 import scala.collection.JavaConverters._
@@ -14,6 +14,8 @@ object DocumentActor {
   case class UpdateDocument(edits: Seq[Diff])
 
   case class UpdateSuccess(document: Document)
+
+  def props() = Props(classOf[DocumentActor])
 }
 
 class DocumentActor extends Actor {

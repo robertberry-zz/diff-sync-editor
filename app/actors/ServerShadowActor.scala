@@ -1,19 +1,19 @@
-package state
+package actors
 
-import akka.actor.{Stash, ActorRef, Actor}
+import akka.actor.{Props, Stash, ActorRef, Actor}
 import crypto.SHA1
 import model.Document
 import name.fraser.neil.plaintext.diff_match_patch.Diff
-import state.ServerShadowActor.{ResetRequest, ResetDocument, MergeDiffs}
+import actors.ServerShadowActor.{ResetRequest, ResetDocument, MergeDiffs}
 
 object ServerShadowActor {
   type Checksum = String
 
-  case class MergeDiffs(diffs: Seq[Diff], shadowChecksum: Checksum)
-
   case class ResetDocument(document: Document)
-
   case object ResetRequest
+
+  def props(socketActor: ActorRef, documentActor: ActorRef) =
+    Props(classOf[ServerShadowActor], socketActor, documentActor)
 }
 
 class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends Actor with Stash {
