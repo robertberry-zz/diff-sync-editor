@@ -2,9 +2,9 @@ package actors
 
 import akka.actor.{Props, Stash, ActorRef, Actor}
 import crypto.SHA1
-import grizzled.slf4j.Logging
 import model._
 import name.fraser.neil.plaintext.diff_match_patch.Diff
+import play.api.Logger
 import play.api.libs.json.{Json, JsValue}
 
 object ServerShadowActor {
@@ -12,13 +12,14 @@ object ServerShadowActor {
     Props(classOf[ServerShadowActor], socketActor, documentActor)
 }
 
-class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends Actor with Stash with Logging {
-  logger.info("Creating server shadow actor ...")
+class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends Actor with Stash {
+  Logger.info("Creating server shadow actor ...")
 
   documentActor ! DocumentActor.GetDocument
 
   override def receive: Receive = {
     case DocumentActor.GetDocumentResponse(document) =>
+      socketActor ! Json.toJson(ResetDocument(document))
       context.become(withShadow(document))
   }
 
@@ -37,7 +38,7 @@ class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends 
           socketActor ! Json.toJson(ResetDocument(shadow))
 
         case None =>
-          logger.error(s"Bad JSON sent to server shadow: $json")
+          Logger.error(s"Bad JSON sent to server shadow: $json")
       }
   }
 
