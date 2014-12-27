@@ -3,7 +3,7 @@ function checksum(message) {
 }
 
 function createConnection() {
-  var connection = new WebSocket("/socket");
+  var connection = new WebSocket("ws://localhost:9000/socket");
 
   connection.onopen = function () {
     console.log("Connection opened!");

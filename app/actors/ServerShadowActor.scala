@@ -13,6 +13,8 @@ object ServerShadowActor {
 }
 
 class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends Actor with Stash with Logging {
+  logger.info("Creating server shadow actor ...")
+
   documentActor ! DocumentActor.GetDocument
 
   override def receive: Receive = {
