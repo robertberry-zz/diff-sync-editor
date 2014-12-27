@@ -10,14 +10,14 @@ object UpdateCommand {
   implicit val jsonFormat = Json.format[UpdateCommand]
 }
 
-case class UpdateCommand(command: MergeDiffs) extends SocketInMessage with SocketOutMessage
+case class UpdateCommand(mergeDiffs: MergeDiffs) extends SocketInMessage with SocketOutMessage
 
 object SocketInMessage {
   implicit lazy val jsonReads = new Reads[SocketInMessage] {
     override def reads(json: JsValue): JsResult[SocketInMessage] =
       json \ "type" match {
         case JsString("update") =>
-          Json.fromJson[UpdateCommand](json \ "mergeDiffs")
+          Json.fromJson[UpdateCommand](json)
 
         case JsString("refresh") =>
           JsSuccess(RefreshCommand)
