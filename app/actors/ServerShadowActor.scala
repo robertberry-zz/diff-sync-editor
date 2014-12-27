@@ -2,21 +2,22 @@ package actors
 
 import akka.actor.{Props, Stash, ActorRef, Actor}
 import crypto.SHA1
-import model.Document
+import grizzled.slf4j.Logging
+import model._
 import name.fraser.neil.plaintext.diff_match_patch.Diff
-import actors.ServerShadowActor.{ResetRequest, ResetDocument, MergeDiffs}
+import actors.ServerShadowActor.ResetDocument
+import play.api.libs.json.{Json, JsValue}
 
 object ServerShadowActor {
   type Checksum = String
 
   case class ResetDocument(document: Document)
-  case object ResetRequest
 
   def props(socketActor: ActorRef, documentActor: ActorRef) =
     Props(classOf[ServerShadowActor], socketActor, documentActor)
 }
 
-class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends Actor with Stash {
+class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends Actor with Stash with Logging {
   documentActor ! DocumentActor.GetDocument
 
   override def receive: Receive = {
@@ -25,15 +26,22 @@ class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends 
   }
 
   def withShadow(shadow: Document): Receive = {
-    case MergeDiffs(edits, checksum) =>
-      if (SHA1.checksum(shadow.body) != checksum) {
-        socketActor ! ResetDocument(shadow)
-      } else {
-        documentActor ! DocumentActor.UpdateDocument(edits)
-        context.become(applyingEdits(shadow))
-      }
+    case json: JsValue =>
+      Json.fromJson[SocketInMessage](json).asOpt match {
+        case Some(UpdateCommand(MergeDiffs(edits, checksum))) =>
+          if (SHA1.checksum(shadow.body) != checksum) {
+            socketActor ! ResetDocument(shadow)
+          } else {
+            documentActor ! DocumentActor.UpdateDocument(edits)
+            context.become(applyingEdits(shadow))
+          }
 
-    case ResetRequest => socketActor ! ResetDocument(shadow)
+        case Some(RefreshCommand) =>
+          socketActor ! ResetDocument(shadow)
+
+        case None =>
+          logger.error(s"Bad JSON sent to server shadow: $json")
+      }
   }
 
   def applyingEdits(shadow: Document): Receive = {
