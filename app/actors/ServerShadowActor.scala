@@ -6,6 +6,7 @@ import model._
 import name.fraser.neil.plaintext.diff_match_patch.Diff
 import play.api.Logger
 import play.api.libs.json.{Json, JsValue}
+import scala.collection.JavaConversions
 
 object ServerShadowActor {
   def props(socketActor: ActorRef, documentActor: ActorRef) =
@@ -48,9 +49,9 @@ class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends 
 
   def applyingEdits(shadow: Document): Receive = {
     case DocumentActor.UpdateSuccess(newDocument) =>
-      val diffs = DiffMatchPatch.diff_main(shadow.body, newDocument.body)
+      val diffs = DiffMatchPatch.diff_main(shadow.body, newDocument.body).listIterator()
       socketActor ! Json.toJson(
-        UpdateCommand(MergeDiffs(Seq(diffs.toArray.asInstanceOf[Array[Diff]]: _*), SHA1.checksum(shadow.body)))
+        UpdateCommand(MergeDiffs(JavaConversions.asScalaIterator(diffs).toSeq, SHA1.checksum(shadow.body)))
       )
       context.become(withShadow(newDocument))
       unstashAll()
