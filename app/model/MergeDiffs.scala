@@ -14,8 +14,8 @@ object MergeDiffs {
 
   implicit val diffJsonFormat = new Format[Diff] {
     override def reads(json: JsValue): JsResult[Diff] = json match {
-      case JsArray(JsNumber(op @ -1 | 0 | 1), JsString(text)) =>
-        JsSuccess(new Diff(opMap(op), text))
+      case JsArray(Seq(JsNumber(op), JsString(text))) if opMap contains op.toInt =>
+        JsSuccess(new Diff(opMap(op.toInt), text))
       case _ =>
         JsError("Diff must be array of operation and text")
     }

@@ -2,8 +2,18 @@ package model
 
 import play.api.libs.json._
 
+sealed trait SocketInMessage
+
+sealed trait SocketOutMessage
+
+object UpdateCommand {
+  implicit val jsonFormat = Json.format[UpdateCommand]
+}
+
+case class UpdateCommand(command: MergeDiffs) extends SocketInMessage with SocketOutMessage
+
 object SocketInMessage {
-  implicit val jsonReads = new Reads[SocketInMessage] {
+  implicit lazy val jsonReads = new Reads[SocketInMessage] {
     override def reads(json: JsValue): JsResult[SocketInMessage] =
       json \ "type" match {
         case JsString("update") =>
@@ -18,8 +28,6 @@ object SocketInMessage {
   }
 }
 
-sealed trait SocketInMessage
-
 object SocketOutMessage {
   implicit val jsonWrites = new Writes[SocketOutMessage] {
     override def writes(o: SocketOutMessage): JsValue = o match {
@@ -28,17 +36,15 @@ object SocketOutMessage {
           "type" -> JsString("update"),
           "mergeDiffs" -> Json.toJson(merge)
         ))
+
+      case ResetDocument(document) =>
+        JsObject(Seq(
+          "type" -> JsString("reset"),
+          "document" -> Json.toJson(document)
+        ))
     }
   }
 }
-
-sealed trait SocketOutMessage
-
-object UpdateCommand {
-  implicit val jsonReads = Json.reads[UpdateCommand]
-}
-
-case class UpdateCommand(command: MergeDiffs) extends SocketInMessage with SocketOutMessage
 
 case object RefreshCommand extends SocketInMessage
 
