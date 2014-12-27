@@ -27,7 +27,11 @@ class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends 
     case json: JsValue =>
       Json.fromJson[SocketInMessage](json).asOpt match {
         case Some(UpdateCommand(MergeDiffs(edits, checksum))) =>
-          if (SHA1.checksum(shadow.body) != checksum) {
+          val serverChecksum = SHA1.checksum(shadow.body)
+
+          if (serverChecksum != checksum) {
+            Logger.info(s"Client shadow checksum ($checksum) did not match server shadow checksum ($serverChecksum)")
+
             socketActor ! Json.toJson(ResetDocument(shadow))
           } else {
             documentActor ! DocumentActor.UpdateDocument(edits)

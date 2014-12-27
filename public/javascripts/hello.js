@@ -1,5 +1,5 @@
 function checksum(message) {
-  return CryptoJS.SHA1(message) + "";
+  return CryptoJS.SHA1(message).toString(CryptoJS.enc.Base64);
 }
 
 (function () {
