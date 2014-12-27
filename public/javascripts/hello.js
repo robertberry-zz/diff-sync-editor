@@ -19,15 +19,21 @@ function checksum(message) {
 
     switch (m.type) {
       case "reset":
+          console.log("Received new authoritative text from server (updates may be lost):", m.document.body);
           editor.value = m.document.body;
           shadow = m.document.body;
           break;
       case "update":
-          if (m.mergeDiffs.shadowChecksum == checksum(shadow)) {
-            var patch = diffMatchPatch.patch_make(m.mergeDiffs.diffs);
+          var serverChecksum = m.mergeDiffs.shadowChecksum;
+          var clientChecksum = checksum(shadow);
+
+          if (serverChecksum == clientChecksum) {
+            console.log("Applying updates from server", m.mergeDiffs.diffs);
+            var patch = diffMatchPatch.patch_make(shadow, m.mergeDiffs.diffs);
             shadow = diffMatchPatch.patch_apply(patch, shadow);
-            editor.value = diffMatchPatch.patch_apply(patch, editor.value);
+            editor.value = diffMatchPatch.patch_apply(patch, editor.value)
           } else {
+            console.log("Server's checksum (" + serverChecksum + ") did not match client checksum (" + clientChecksum + ")");
             connection.send({
               type: "refresh"
             });

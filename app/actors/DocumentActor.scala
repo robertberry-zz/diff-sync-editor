@@ -27,7 +27,7 @@ class DocumentActor extends Actor {
     case GetDocument => sender ! GetDocumentResponse(document)
 
     case UpdateDocument(edits) =>
-      val patches = DiffMatchPatch.patch_make(new util.LinkedList(edits.toList.asJava))
+      val patches = DiffMatchPatch.patch_make(document.body, new util.LinkedList(edits.toList.asJava))
       document = Document(DiffMatchPatch.patch_apply(patches, document.body)(0).asInstanceOf[String])
       sender ! UpdateSuccess(document)
   }

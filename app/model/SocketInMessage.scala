@@ -7,7 +7,15 @@ sealed trait SocketInMessage
 sealed trait SocketOutMessage
 
 object UpdateCommand {
-  implicit val jsonFormat = Json.format[UpdateCommand]
+  // Je suis lazy
+  implicit val jsonReads = Json.reads[UpdateCommand]
+
+  implicit val jsonWrites = new Writes[UpdateCommand] {
+    override def writes(o: UpdateCommand): JsValue = JsObject(Seq(
+      "type" -> JsString("update"),
+      "mergeDiffs" -> Json.toJson(o.mergeDiffs)
+    ))
+  }
 }
 
 case class UpdateCommand(mergeDiffs: MergeDiffs) extends SocketInMessage with SocketOutMessage
@@ -28,28 +36,15 @@ object SocketInMessage {
   }
 }
 
-object SocketOutMessage {
-  implicit val jsonWrites = new Writes[SocketOutMessage] {
-    override def writes(o: SocketOutMessage): JsValue = o match {
-      case UpdateCommand(merge) =>
-        JsObject(Seq(
-          "type" -> JsString("update"),
-          "mergeDiffs" -> Json.toJson(merge)
-        ))
-
-      case ResetDocument(document) =>
-        JsObject(Seq(
-          "type" -> JsString("reset"),
-          "document" -> Json.toJson(document)
-        ))
-    }
-  }
-}
-
 case object RefreshCommand extends SocketInMessage
 
 object ResetDocument {
-  implicit val jsonWrites = Json.writes[ResetDocument]
+  implicit val jsonWrites = new Writes[ResetDocument] {
+    override def writes(o: ResetDocument): JsValue = JsObject(Seq(
+      "type" -> JsString("reset"),
+      "document" -> Json.toJson(o.document)
+    ))
+  }
 }
 
 case class ResetDocument(document: Document) extends SocketOutMessage

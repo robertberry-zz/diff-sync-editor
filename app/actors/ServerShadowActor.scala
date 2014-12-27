@@ -2,11 +2,11 @@ package actors
 
 import akka.actor.{Props, Stash, ActorRef, Actor}
 import crypto.SHA1
+import lib.LinkedListHelper
 import model._
 import name.fraser.neil.plaintext.diff_match_patch.Diff
 import play.api.Logger
 import play.api.libs.json.{Json, JsValue}
-import scala.collection.JavaConversions
 
 object ServerShadowActor {
   def props(socketActor: ActorRef, documentActor: ActorRef) =
@@ -36,7 +36,7 @@ class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends 
             socketActor ! Json.toJson(ResetDocument(shadow))
           } else {
             documentActor ! DocumentActor.UpdateDocument(edits)
-            context.become(applyingEdits(shadow))
+            context.become(applyingEdits(shadow, edits))
           }
 
         case Some(RefreshCommand) =>
@@ -47,12 +47,14 @@ class ServerShadowActor(socketActor: ActorRef, documentActor: ActorRef) extends 
       }
   }
 
-  def applyingEdits(shadow: Document): Receive = {
+  def applyingEdits(shadow: Document, edits: Seq[Diff]): Receive = {
     case DocumentActor.UpdateSuccess(newDocument) =>
-      val diffs = DiffMatchPatch.diff_main(shadow.body, newDocument.body).listIterator()
-      socketActor ! Json.toJson(
-        UpdateCommand(MergeDiffs(JavaConversions.asScalaIterator(diffs).toSeq, SHA1.checksum(shadow.body)))
-      )
+      val patch = DiffMatchPatch.patch_make(shadow.body, LinkedListHelper.fromTraversable(edits))
+      val newShadow = Document(DiffMatchPatch.patch_apply(patch, shadow.body)(0).asInstanceOf[String])
+      Logger.info(s"Patching server shadow (${shadow.body} -> ${newShadow.body})")
+
+      val diffs = LinkedListHelper.toSeq(DiffMatchPatch.diff_main(newShadow.body, newDocument.body))
+      socketActor ! Json.toJson(UpdateCommand(MergeDiffs(diffs, SHA1.checksum(newShadow.body))))
       context.become(withShadow(newDocument))
       unstashAll()
 
