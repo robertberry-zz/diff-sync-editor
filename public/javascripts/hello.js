@@ -30,8 +30,8 @@ function checksum(message) {
           if (serverChecksum == clientChecksum) {
             console.log("Applying updates from server", m.mergeDiffs.diffs);
             var patch = diffMatchPatch.patch_make(shadow, m.mergeDiffs.diffs);
-            shadow = diffMatchPatch.patch_apply(patch, shadow);
-            editor.value = diffMatchPatch.patch_apply(patch, editor.value)
+            shadow = diffMatchPatch.patch_apply(patch, shadow)[0];
+            editor.value = diffMatchPatch.patch_apply(patch, editor.value)[0];
           } else {
             console.log("Server's checksum (" + serverChecksum + ") did not match client checksum (" + clientChecksum + ")");
             connection.send({
@@ -49,18 +49,16 @@ function checksum(message) {
   setInterval(function () {
     var editorBody = editor.value;
 
-    if (editorBody != shadow) {
-      var diffs = diffMatchPatch.diff_main(shadow, editorBody);
+    var diffs = diffMatchPatch.diff_main(shadow, editorBody);
 
-      connection.send(JSON.stringify({
-        type: "update",
-        mergeDiffs: {
-          diffs: diffs,
-          shadowChecksum: checksum(shadow)
-        }
-      }));
+    connection.send(JSON.stringify({
+      type: "update",
+      mergeDiffs: {
+        diffs: diffs,
+        shadowChecksum: checksum(shadow)
+      }
+    }));
 
-      shadow = editorBody;
-    }
-  }, 3000);
+    shadow = editorBody;
+  }, 1000);
 })();
